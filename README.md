@@ -2,44 +2,58 @@
 
 Windows-style virtual desktops for Omarchy/Hyprland — one keypress moves every monitor to a new set of workspaces.
 
-## The problem
+**Requires two or more monitors.** On a single screen it disables itself automatically (see [Single monitor](#single-monitor)).
 
-A Hyprland workspace belongs to exactly one monitor. There is no built-in notion of a desktop that *spans* monitors, so there is no equivalent of Windows' <kbd>Win</kbd>+<kbd>Ctrl</kbd>+<kbd>←</kbd>/<kbd>→</kbd> — the shortcut that flips every screen to a fresh set of windows at once.
+## The problem this solves
 
-This adds that. A **desktop** is one workspace per monitor. With four monitors and three desktops:
+On Windows, <kbd>Win</kbd>+<kbd>Ctrl</kbd>+<kbd>←</kbd>/<kbd>→</kbd> switches **all of your monitors at once**. A virtual desktop spans every screen: flip to desktop 2 and all three monitors change together to a fresh set of windows. Your "work" layout and your "personal" layout are each one keypress away, across the whole desk.
 
-|              | DP-6 (left) | DP-11 | DP-9 | eDP-1 (right) |
-| ------------ | ----------- | ----- | ---- | ------------- |
-| <kbd>SUPER</kbd>+<kbd>F1</kbd> | 1 | 2  | 3  | 4  |
-| <kbd>SUPER</kbd>+<kbd>F2</kbd> | 5 | 6  | 7  | 8  |
-| <kbd>SUPER</kbd>+<kbd>F3</kbd> | 9 | 10 | 11 | 12 |
+Hyprland cannot do this. **A workspace belongs to exactly one monitor.** There is no built-in concept of a desktop that spans screens, and no dispatcher that switches them together. `SUPER+1` moves *one* screen. To change a four-monitor setup you press four different keys and remember which workspace lives where.
 
-One keypress switches all four together. Your existing <kbd>SUPER</kbd>+<kbd>1</kbd>..<kbd>0</kbd> bindings keep working unchanged.
+That is the gap. This plugin closes it.
 
-## Monitors are ordered by position, not by ID
+A **desktop** here is one workspace per monitor:
 
-Hyprland's monitor `id` is DRM probe order, which routinely bears no relation to how the screens sit on your desk. On the author's machine:
+<img src="docs/desktops.svg" alt="Four monitors switching from desktop 1 (workspaces 1-4) to desktop 2 (workspaces 5-8) with a single keypress" width="760">
+
+The same thing on real screens — four monitors, one keypress apart:
+
+<img src="docs/switching.png" alt="Four monitors showing omarchy.org, LibreOffice Calc, btop and fastfetch on desktop 2; after pressing SUPER+F3 all four show lazygit, the Omarchy manual, lazydocker and a terminal on desktop 3" width="900">
+
+With four monitors and three desktops:
+
+|                                | DP-6 (left) | DP-11 | DP-9 | eDP-1 (right) |
+| ------------------------------ | ----------- | ----- | ---- | ------------- |
+| <kbd>SUPER</kbd>+<kbd>F1</kbd> | 1           | 2     | 3    | 4             |
+| <kbd>SUPER</kbd>+<kbd>F2</kbd> | 5           | 6     | 7    | 8             |
+| <kbd>SUPER</kbd>+<kbd>F3</kbd> | 9           | 10    | 11   | 12            |
+
+One keypress switches all four. Your existing <kbd>SUPER</kbd>+<kbd>1</kbd>..<kbd>0</kbd> keys are untouched and still move a single screen.
+
+### It also fixes scrambled workspace assignment
+
+A second, smaller problem comes free. By default each monitor claims the lowest unused workspace as it comes up, **in DRM probe order** — which routinely bears no relation to how the screens sit on your desk. On the author's machine:
 
 ```
 eDP-1 = id 0    DP-6 = id 1    DP-9 = id 2    DP-11 = id 3
 ```
 
-The laptop is `id 0` while physically sitting at the far *right*. Numbering desktops by ID there produces a scrambled mapping — the exact problem this is meant to solve.
+The laptop is `id 0` while physically at the far *right*, so workspace 1 landed on the laptop and the second monitor from the left showed workspace 4. The order also reshuffles on every reload and hotplug.
 
-So monitors are sorted by their **x coordinate**, left to right. That ordering is stable across reboots, survives hotplug, and matches what you see.
+This plugin pins every workspace to a monitor, **sorted by x coordinate — left to right as you see them**. Stable across reboots, hotplug, and undocking.
 
 ## Install
 
-Two halves: the Hyprland module does the work, the bar widget shows what it is doing. The widget is optional.
+Two halves: the Hyprland module does the work, the bar widget shows and configures it. The widget is optional.
 
 ```bash
 omarchy plugin add https://github.com/mdelgert/omarchy-desktop-groups.git --enable
 ~/.config/omarchy/plugins/io.github.mdelgert.desktop-groups/install-hyprland.sh
 ```
 
-The first line installs the bar widget. The second wires the Hyprland module into your config — the switching works without the widget, but not the other way round.
+The first line installs the bar widget. The second wires the Hyprland module into your config — switching works without the widget, but not the other way round.
 
-Or, without the bar widget at all:
+Without the bar widget at all:
 
 ```bash
 git clone https://github.com/mdelgert/omarchy-desktop-groups.git
@@ -47,19 +61,70 @@ cd omarchy-desktop-groups
 ./install-hyprland.sh
 ```
 
-This copies the module to `~/.config/hypr/desktop-groups.lua` and appends a require to `~/.config/hypr/hyprland.lua` (backing it up first). Re-running is safe — the require is added only once.
-
-Pick a desktop count at install time:
+Choose a desktop count at install time:
 
 ```bash
 DESKTOPS=4 ./install-hyprland.sh
 ```
 
-To remove it:
+## Uninstall
+
+**Remove the Hyprland module** — deletes `~/.config/hypr/desktop-groups.lua` and strips the `require` line from `hyprland.lua`, backing it up first:
 
 ```bash
-./uninstall-hyprland.sh
+~/.config/omarchy/plugins/io.github.mdelgert.desktop-groups/uninstall-hyprland.sh
 ```
+
+Or from a clone: `./uninstall-hyprland.sh`
+
+**Remove the bar widget:**
+
+```bash
+omarchy plugin remove io.github.mdelgert.desktop-groups
+```
+
+**Remove the saved settings** (optional — the two panel toggles):
+
+```bash
+rm -f ~/.local/state/omarchy/desktop-groups.conf
+```
+
+### What uninstalling does and does not do
+
+- Bindings and workspace rules live only in the running compositor, so they are gone after the reload the uninstaller performs. <kbd>SUPER</kbd>+<kbd>F1</kbd>..<kbd>F3</kbd> become unbound again.
+- `binds:hide_special_on_workspace_change` reverts to whatever your own config sets, since the module is no longer overriding it.
+- **No window and no workspace is moved.** Anything sitting on workspace 7 stays on workspace 7. Hyprland simply stops pinning workspaces to monitors, so placement returns to probe order on the next reload.
+- Nothing in `~/.config/hypr/` other than the `require` line in `hyprland.lua` is touched. Your `monitors.lua` is never modified by the installer.
+
+To turn the feature off **without uninstalling**, use the toggle in the bar panel — or:
+
+```bash
+hyprctl eval 'require("hypr.desktop-groups").set_enabled(false)'
+```
+
+That persists across reloads and reboots.
+
+## Monitor requirements
+
+### Single monitor
+
+The module **stands down entirely** below two monitors: no workspace rules, no bindings, and `switch()` becomes a no-op. The bar widget hides itself.
+
+This is deliberate. With one screen a "desktop" collapses to a single workspace — which is exactly what <kbd>SUPER</kbd>+<kbd>1</kbd>..<kbd>0</kbd> already switches between. A second set of keys doing the same thing would be noise, and it would shadow <kbd>SUPER</kbd>+<kbd>F1</kbd>..<kbd>F3</kbd> for no benefit.
+
+Undock to one screen and it deactivates; plug a second in and it returns, because rules rebuild on `monitor.added`, `monitor.removed`, and `monitor.layout_changed`.
+
+### Two or more
+
+Nothing is hardcoded to a monitor count. The layout is derived from however many are connected. Two monitors with three desktops:
+
+|                                | left | right |
+| ------------------------------ | ---- | ----- |
+| <kbd>SUPER</kbd>+<kbd>F1</kbd> | 1    | 2     |
+| <kbd>SUPER</kbd>+<kbd>F2</kbd> | 3    | 4     |
+| <kbd>SUPER</kbd>+<kbd>F3</kbd> | 5    | 6     |
+
+Mirrored outputs are skipped — they duplicate another screen, so giving one its own workspace would strand it out of view.
 
 ## Configure
 
@@ -73,11 +138,11 @@ require("hypr.desktop-groups").setup({
 })
 ```
 
-| Option     | Default          | Meaning |
-| ---------- | ---------------- | ------- |
-| `desktops` | `3`              | How many desktops to create. |
-| `bind`     | `"SUPER + F%d"`  | Key pattern for the switch bindings; `%d` is the desktop number. |
-| `slots`    | monitor count    | Workspaces reserved per desktop. See below. |
+| Option     | Default       | Meaning                                                                    |
+| ---------- | ------------- | -------------------------------------------------------------------------- |
+| `desktops` | `3`           | How many desktops to create.                                                |
+| `bind`     | `"SUPER + F%d"` | Key pattern for the switch bindings; `%d` is the desktop number.           |
+| `slots`    | monitor count | Workspaces reserved per desktop. See below.                                 |
 
 ### About `slots`
 
@@ -99,20 +164,22 @@ omarchy menu keybindings --print
 
 ## Bar widget
 
-A single `▦` icon. Deliberately no digits: the stock workspace widget is already a row of numbers, and anything numeric beside it reads as one more of them.
+<img src="docs/bar-widget.png" alt="The desktop groups icon on the Omarchy bar, left of the other status icons" width="360">
 
-The current desktop is in the tooltip on hover, and in the panel on click — which is where you look when you actually want to know. `SUPER+F1` is not discoverable on its own, so the panel is also where the feature explains itself.
+A single `▦` icon (leftmost above). Deliberately no digits: the stock workspace widget is already a row of numbers, and anything numeric beside it reads as one more of them.
+
+The current desktop is in the tooltip on hover, and in the panel on click — which is where you look when you actually want to know. <kbd>SUPER</kbd>+<kbd>F1</kbd> is not discoverable on its own, so the panel is also where the feature explains itself.
 
 Two switches live there:
 
 | Switch | Does |
 | ------ | ---- |
-| **Desktop groups** | Turn the bindings and workspace pinning off. Hyprland goes back to its own workspace placement; no window is moved. |
+| **Desktop groups** | Turn the bindings and workspace pinning off. Hyprland returns to its own workspace placement; no window is moved. |
 | **Hide scratchpad on switch** | `binds:hide_special_on_workspace_change`. A desktop switch changes the workspace on every monitor at once, which makes this far more noticeable than on a single screen. |
 
 Both persist to `~/.local/state/omarchy/desktop-groups.conf` and are re-applied by `setup()` on every reload.
 
-The widget also has `desktops`, `slots`, and `bindPrefix` settings in the bar's widget configuration. These mirror the Lua values because the bar and the compositor config are configured in different places — if they disagree, the number shown goes wrong while the switching stays correct. The Lua side is the source of truth.
+The widget also has `desktops`, `slots`, and `bindPrefix` settings in the bar's widget configuration. These mirror the Lua values because the bar and the compositor config are configured in different places — if they disagree, the number in the tooltip goes wrong while the switching stays correct. The Lua side is the source of truth.
 
 ## How it compares
 
@@ -138,13 +205,13 @@ Neither is a superset of the other. Pick the one matching how you think about sc
 ## Notes
 
 - **Workspace rules do not move workspaces that already exist.** After install, a reload registers the rules but leaves current workspaces where they sit. Log out and back in for a clean mapping, or just press <kbd>SUPER</kbd>+<kbd>F1</kbd>.
-- **Mirrored outputs are skipped** — they duplicate another screen, so giving one its own workspace would strand it out of view.
-- **Undocking** is handled: rules rebuild on `monitor.added`, `monitor.removed`, and `monitor.layout_changed`, and switching skips monitors that are gone. Windows on a vanished monitor migrate as Hyprland sees fit and do not automatically return.
+- **Undocking** is handled: rules rebuild on monitor events, and switching skips monitors that are gone. Windows on a vanished monitor migrate as Hyprland sees fit and do not automatically return.
 - **Nothing is unbound.** No stock Omarchy binding is replaced.
+- The bar widget tracks the focused workspace from Hyprland's event stream rather than the Quickshell model, which otherwise trails a switch by a second or more.
 
 ## Requirements
 
-Hyprland with Lua configuration and an Omarchy-style `~/.config/hypr/hyprland.lua`. Developed and tested against Hyprland 0.56.2.
+Hyprland with Lua configuration and an Omarchy-style `~/.config/hypr/hyprland.lua`. Two or more monitors. Developed and tested against Hyprland 0.56.2.
 
 ## License
 

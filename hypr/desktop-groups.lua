@@ -114,6 +114,16 @@ local function monitors_by_position()
   return list
 end
 
+-- Below this the feature has nothing to do: with a single screen a "desktop"
+-- collapses to one workspace, which is exactly what SUPER+1..0 already switches
+-- between. Rather than shadow those keys with a second set that does the same
+-- thing, the module stands down until a second monitor appears.
+local MIN_MONITORS = 2
+
+local function applicable(monitors)
+  return #monitors >= MIN_MONITORS
+end
+
 local function slot_count(monitors)
   return options.slots or math.max(#monitors, 1)
 end
@@ -145,6 +155,10 @@ local function apply_rules(monitors)
   end
   created.rules = {}
 
+  if not applicable(monitors) then
+    return
+  end
+
   local slots = slot_count(monitors)
 
   for desktop = 1, options.desktops do
@@ -175,7 +189,7 @@ end
 -- where you started rather than dumping focus on whichever screen came last.
 function M.switch(desktop)
   local monitors = monitors_by_position()
-  if #monitors == 0 then
+  if not applicable(monitors) then
     return
   end
 
@@ -230,7 +244,7 @@ local function apply_binds()
   end
   created.binds = {}
 
-  if not settings.enabled then
+  if not settings.enabled or not applicable(monitors_by_position()) then
     return
   end
 
@@ -249,6 +263,12 @@ local function apply_all()
 end
 
 -- ---- Toggles the bar widget drives ----------------------------------------
+
+-- Whether the current monitor set makes this feature meaningful at all. The bar
+-- widget hides itself when this is false.
+function M.is_applicable()
+  return applicable(monitors_by_position())
+end
 
 function M.is_enabled()
   return settings.enabled

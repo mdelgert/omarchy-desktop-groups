@@ -155,7 +155,14 @@ BarWidget {
     function toggle(): void { root.togglePanel() }
   }
 
-  implicitWidth: button.implicitWidth
+  // Nothing to show on a single screen: a "desktop" collapses to one workspace,
+  // which SUPER+1..0 already switches between. The Lua module stands down under
+  // the same condition, so the bar should not advertise a feature that is off.
+  // Zero width as well as hidden, or the bar reserves an empty slot for it.
+  readonly property bool applicable: Hyprland.monitors.values.length > 1
+
+  visible: applicable
+  implicitWidth: applicable ? button.implicitWidth : 0
   implicitHeight: button.implicitHeight
 
   WidgetButton {
