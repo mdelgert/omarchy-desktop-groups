@@ -14,11 +14,7 @@ That is the gap. This plugin closes it.
 
 A **desktop** here is one workspace per monitor:
 
-<img src="docs/desktops.svg" alt="Four monitors switching from desktop 1 (workspaces 1-4) to desktop 2 (workspaces 5-8) with a single keypress" width="760">
-
-The same thing on real screens — four monitors, one keypress apart:
-
-<img src="docs/switching.png" alt="Four monitors showing omarchy.org, LibreOffice Calc, btop and fastfetch on desktop 2; after pressing SUPER+F3 all four show lazygit, the Omarchy manual, lazydocker and a terminal on desktop 3" width="900">
+<img src="docs/switching.svg" alt="Four monitors on desktop 1 showing workspaces 1 to 4; after one keypress all four show workspaces 5 to 8 on desktop 2" width="900">
 
 With four monitors and three desktops:
 
