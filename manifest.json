@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.mdelgert.desktop-groups",
+  "name": "Desktop Groups",
+  "version": "0.1.0",
+  "author": "Matthew Elgert",
+  "license": "MIT",
+  "description": "Windows-style virtual desktops for Hyprland: one keypress moves every monitor to a new set of workspaces. This widget shows which desktop you are on and switches between them.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "DesktopGroups.qml"
+  },
+  "barWidget": {
+    "displayName": "Desktop Groups",
+    "description": "Dots showing which desktop every monitor is on, and one click to switch.",
+    "category": "Compositor",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "desktops": 3,
+      "slots": 0,
+      "bindPrefix": "SUPER + F"
+    },
+    "schema": [
+      {
+        "key": "desktops",
+        "type": "integer",
+        "label": "Desktops",
+        "description": "How many desktops to show. Match the 'desktops' value passed to setup() in hyprland.lua.",
+        "min": 1,
+        "max": 12,
+        "step": 1,
+        "defaultValue": 3
+      },
+      {
+        "key": "slots",
+        "type": "integer",
+        "label": "Workspaces per desktop",
+        "description": "Workspaces reserved per desktop, matching the 'slots' value in hyprland.lua. Leave at 0 to follow the connected monitor count, which is the module's default.",
+        "min": 0,
+        "max": 12,
+        "step": 1,
+        "defaultValue": 0
+      },
+      {
+        "key": "bindPrefix",
+        "type": "string",
+        "label": "Keybinding prefix",
+        "description": "Shown in the panel next to each desktop. Match the 'bind' pattern in hyprland.lua; the desktop number is appended.",
+        "defaultValue": "SUPER + F"
+      }
+    ]
+  }
+}

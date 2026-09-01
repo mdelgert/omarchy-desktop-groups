@@ -46,6 +46,49 @@ local DEFAULTS = {
   slots = nil,
 }
 
+-- Settings the bar widget can flip, persisted so a reload or reboot keeps them.
+--
+-- Kept in XDG state rather than in hyprland.lua: these are runtime toggles, and
+-- rewriting a user's config file from a bar click is a worse trade than a small
+-- state file the module reads at setup.
+local state_dir = (os.getenv("XDG_STATE_HOME") or ((os.getenv("HOME") or "") .. "/.local/state")) .. "/omarchy"
+local state_path = state_dir .. "/desktop-groups.conf"
+
+local function read_state()
+  local values = {}
+  local file = io.open(state_path, "r")
+  if not file then
+    return values
+  end
+
+  for line in file:lines() do
+    local key, value = line:match("^([%w_]+)=([01])$")
+    if key then
+      values[key] = value == "1"
+    end
+  end
+
+  file:close()
+  return values
+end
+
+local function write_state(values)
+  os.execute("mkdir -p '" .. state_dir .. "'")
+
+  local file = io.open(state_path, "w")
+  if not file then
+    return
+  end
+
+  for key, value in pairs(values) do
+    file:write(key .. "=" .. (value and "1" or "0") .. "\n")
+  end
+
+  file:close()
+end
+
+local settings = { enabled = true, hide_special = true }
+
 -- Rules and binds created by the last apply(), so a rebuild can retire them.
 local created = { rules = {}, binds = {} }
 local options = {}
@@ -187,6 +230,10 @@ local function apply_binds()
   end
   created.binds = {}
 
+  if not settings.enabled then
+    return
+  end
+
   for desktop = 1, options.desktops do
     local keys = string.format(options.bind, desktop)
 
@@ -194,6 +241,42 @@ local function apply_binds()
       M.switch(desktop)
     end, { description = "Switch all monitors to desktop " .. desktop })
   end
+end
+
+local function apply_all()
+  apply_rules(monitors_by_position())
+  apply_binds()
+end
+
+-- ---- Toggles the bar widget drives ----------------------------------------
+
+function M.is_enabled()
+  return settings.enabled
+end
+
+-- Turning this off retires the bindings and disables the workspace rules, so
+-- Hyprland goes back to its own workspace placement. It does not move any
+-- window: whatever sits on workspace 7 stays there.
+function M.set_enabled(on)
+  settings.enabled = on and true or false
+  write_state(settings)
+  apply_all()
+  return settings.enabled
+end
+
+function M.hides_special()
+  return settings.hide_special
+end
+
+-- binds:hide_special_on_workspace_change -- whether the SUPER+S scratchpad is
+-- put away when the workspace changes. Surfaced here because a desktop switch
+-- changes the workspace on every monitor at once, which makes this setting far
+-- more noticeable than it is on a single screen.
+function M.set_hide_special(on)
+  settings.hide_special = on and true or false
+  write_state(settings)
+  hl.config({ binds = { hide_special_on_workspace_change = settings.hide_special } })
+  return settings.hide_special
 end
 
 function M.setup(opts)
@@ -205,8 +288,15 @@ function M.setup(opts)
     options[key] = value
   end
 
-  apply_rules(monitors_by_position())
-  apply_binds()
+  -- setup() runs again on every config reload, so the stored toggles have to be
+  -- re-read and re-applied here or a reload would silently reset them.
+  local stored = read_state()
+  for key, value in pairs(stored) do
+    settings[key] = value
+  end
+
+  hl.config({ binds = { hide_special_on_workspace_change = settings.hide_special } })
+  apply_all()
 
   -- Rebuild when the monitor set changes. Two reasons this matters: monitors may
   -- not be enumerated yet while the config is first parsed, and undocking or

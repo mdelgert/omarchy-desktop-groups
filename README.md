@@ -30,6 +30,17 @@ So monitors are sorted by their **x coordinate**, left to right. That ordering i
 
 ## Install
 
+Two halves: the Hyprland module does the work, the bar widget shows what it is doing. The widget is optional.
+
+```bash
+omarchy plugin add https://github.com/mdelgert/omarchy-desktop-groups.git --enable
+~/.config/omarchy/plugins/io.github.mdelgert.desktop-groups/install-hyprland.sh
+```
+
+The first line installs the bar widget. The second wires the Hyprland module into your config — the switching works without the widget, but not the other way round.
+
+Or, without the bar widget at all:
+
 ```bash
 git clone https://github.com/mdelgert/omarchy-desktop-groups.git
 cd omarchy-desktop-groups
@@ -85,6 +96,23 @@ require("hypr.desktop-groups").setup({ desktops = 3, slots = 4 })
 ```bash
 omarchy menu keybindings --print
 ```
+
+## Bar widget
+
+A single `▦` icon. Deliberately no digits: the stock workspace widget is already a row of numbers, and anything numeric beside it reads as one more of them.
+
+The current desktop is in the tooltip on hover, and in the panel on click — which is where you look when you actually want to know. `SUPER+F1` is not discoverable on its own, so the panel is also where the feature explains itself.
+
+Two switches live there:
+
+| Switch | Does |
+| ------ | ---- |
+| **Desktop groups** | Turn the bindings and workspace pinning off. Hyprland goes back to its own workspace placement; no window is moved. |
+| **Hide scratchpad on switch** | `binds:hide_special_on_workspace_change`. A desktop switch changes the workspace on every monitor at once, which makes this far more noticeable than on a single screen. |
+
+Both persist to `~/.local/state/omarchy/desktop-groups.conf` and are re-applied by `setup()` on every reload.
+
+The widget also has `desktops`, `slots`, and `bindPrefix` settings in the bar's widget configuration. These mirror the Lua values because the bar and the compositor config are configured in different places — if they disagree, the number shown goes wrong while the switching stays correct. The Lua side is the source of truth.
 
 ## How it compares
 
